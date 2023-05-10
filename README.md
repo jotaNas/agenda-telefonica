@@ -37,9 +37,11 @@ Copy code
 
 Para executar o projeto, basta executar o comando:
 
-sqlCopy code
+Para rodar o servidor
 
-`npm start`
+`node server.js`
+
+Abra o arquvi index.html com algum liveserver
 
 ## Licença
 
