@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Contato" ALTER COLUMN "idade" SET DATA TYPE TEXT;

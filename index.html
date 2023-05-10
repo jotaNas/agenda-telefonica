@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="style.css" />
+        <title>Agenda Telefônica</title>
+    </head>
+    <body>
+        <main>
+            <h1>Agenda Telefônica</h1>
+
+            <h2>Cadastro de Contato</h2>
+            <form id="form-cadastro">
+                <label for="input-nome">Nome:</label>
+                <input type="text" id="input-nome" name="nome" required /><br />
+
+                <label for="input-idade">Idade:</label>
+                <input
+                    type="number"
+                    id="input-idade"
+                    name="idade"
+                    required
+                /><br />
+
+                <label for="input-telefones">Telefones:</label>
+                <input
+                    type="text"
+                    id="input-telefones"
+                    name="telefones"
+                    required
+                /><br />
+                <small>Insira os números separados por vírgula</small><br />
+
+                <button type="submit">Cadastrar</button>
+            </form>
+
+            <h2>Pesquisa de Contato</h2>
+            <form id="form-pesquisa">
+                <label for="input-pesquisa">Pesquisar:</label>
+                <input type="text" id="input-pesquisa" name="pesquisa" /><br />
+
+                <button type="submit">Pesquisar</button>
+            </form>
+
+            <table id="tabela-contatos">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Idade</th>
+                        <th>Telefones</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </main>
+
+        <script>
+            const formCadastro = document.getElementById("form-cadastro");
+            const formPesquisa = document.getElementById("form-pesquisa");
+            const tabelaContatos = document.getElementById("tabela-contatos");
+
+            const baseUrl = "http://localhost:3000";
+
+            formCadastro.addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                const nome = document.getElementById("input-nome").value;
+                const idade = parseInt(
+                    document.getElementById("input-idade").value
+                );
+                const telefones = [];
+                const numero = document.getElementById("input-telefones").value;
+
+                telefones[0] = { numero: numero };
+
+                const response = await fetch(`${baseUrl}/contatos`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nome, idade, telefones }),
+                });
+
+                if (response.ok) {
+                    const contato = await response.json();
+                    adicionarContatoTabela(contato);
+                    formCadastro.reset();
+                } else {
+                    console.error(
+                        "Erro ao cadastrar contato:",
+                        response.status,
+                        response.statusText
+                    );
+                }
+            });
+
+            formPesquisa.addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                const pesquisa =
+                    document.getElementById("input-pesquisa").value;
+
+                const response = await fetch(
+                    `${baseUrl}/contatos?pesquisa=${encodeURIComponent(
+                        pesquisa
+                    )}`
+                );
+
+                if (response.ok) {
+                    const contatos = await response.json();
+                    limparTabelaContatos();
+                    contatos.forEach(adicionarContatoTabela);
+                } else {
+                    console.error(
+                        "Erro ao buscar contatos:",
+                        responsestatus,
+                        response.statusText
+                    );
+                }
+            });
+            tabelaContatos.addEventListener("click", async (event) => {
+                const botao = event.target;
+
+                if (botao.tagName !== "BUTTON") {
+                    return;
+                }
+
+                const idContato = botao.dataset.idContato;
+
+                if (botao.classList.contains("botao-excluir")) {
+                    const response = await fetch(
+                        `${baseUrl}/contatos/${idContato}`,
+                        {
+                            method: "DELETE",
+                        }
+                    );
+
+                    if (response.ok) {
+                        botao.closest("tr").remove();
+                        console.log(`Contato ${idContato} excluído`);
+                    } else {
+                        console.error(
+                            "Erro ao excluir contato:",
+                            response.status,
+                            response.statusText
+                        );
+                    }
+                } else if (botao.classList.contains("botao-editar")) {
+                    const nome = prompt("Digite o novo nome:");
+                    const idade = parseInt(prompt("Digite a nova idade:"));
+                    const numero = prompt("Digite os novos telefone:");
+                    const telefones = [{ numero: numero }];
+
+                    const response = await fetch(
+                        `${baseUrl}/contatos/${idContato}`,
+                        {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                idContato,
+                                nome,
+                                idade,
+                                numero,
+                                telefones,
+                            }),
+                        }
+                    );
+
+                    if (response.ok) {
+                        const contato = await response.json();
+                        atualizarContatoTabela(idContato, contato);
+                        console.log(`Contato ${idContato} atualizado`);
+                    } else {
+                        console.error(
+                            "Erro ao atualizar contato:",
+                            response.status,
+                            response.statusText
+                        );
+                    }
+                }
+            });
+
+            async function buscarContatos() {
+                const response = await fetch(`${baseUrl}/contatos`);
+
+                if (response.ok) {
+                    const contatos = await response.json();
+                    limparTabelaContatos();
+                    contatos.forEach(adicionarContatoTabela);
+                } else {
+                    console.error(
+                        "Erro ao buscar contatos:",
+                        response.status,
+                        response.statusText
+                    );
+                }
+            }
+
+            function adicionarContatoTabela(contato) {
+                const numerosTelefone = contato.telefones
+                    ?.map((telefone) => telefone.numero)
+                    .join(", ");
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+    <td>${contato.id}</td>
+    <td>${contato.nome}</td>
+    <td>${contato.idade}</td>
+    <td>${numerosTelefone}</td>
+    <td>
+      <button type="button" class="botao-editar" data-id-contato="${contato.id}">Editar</button>
+      <button type="button" class="botao-excluir" data-id-contato="${contato.id}">Excluir</button>
+    </td>
+  `;
+                tabelaContatos.querySelector("tbody").appendChild(tr);
+            }
+
+            function atualizarContatoTabela(idContato, contato) {
+                const tr = tabelaContatos.querySelector(
+                    `tr[data-id-contato="${idContato}"]`
+                );
+
+                if (!tr) {
+                    console.error(
+                        `Não foi possível encontrar o contato com ID ${idContato} na tabela de contatos.`
+                    );
+                    return;
+                }
+
+                if (!contato) {
+                    console.error(`O objeto contato é nulo ou indefinido.`);
+                    return;
+                }
+
+                const nomeTd = tr.querySelector("td:nth-child(2)");
+                const idadeTd = tr.querySelector("td:nth-child(3)");
+                const telefonesTd = tr.querySelector("td:nth-child(4)");
+
+                if (!nomeTd || !idadeTd || !telefonesTd) {
+                    console.error(
+                        `Erro ao atualizar o contato com ID ${idContato}: células não encontradas.`
+                    );
+                    return;
+                }
+
+                nomeTd.textContent = contato.nome;
+                idadeTd.textContent = contato.idade;
+                telefonesTd.textContent = contato.telefones.join(", ");
+            }
+
+            function limparTabelaContatos() {
+                tabelaContatos.querySelector("tbody").innerHTML = "";
+            }
+
+            buscarContatos();
+        </script>
+    </body>
+</html>
